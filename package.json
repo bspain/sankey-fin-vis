@@ -1,0 +1,20 @@
+{
+  "name": "sankey-fin-vis",
+  "version": "0.1.0",
+  "description": "Electron app to visualize financial transactions as a Sankey diagram grouped by category",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron ."
+  },
+  "author": "Ben",
+  "license": "MIT",
+  "dependencies": {
+    "d3": "^7.9.0",
+    "d3-sankey": "^0.12.3",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "electron": "^26.3.0"
+  }
+}

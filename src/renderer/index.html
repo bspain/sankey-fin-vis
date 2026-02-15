@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Sankey Financial Visualizer</title>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' data:">
+    <link rel="stylesheet" href="./style.css">
+  </head>
+  <body>
+    <main>
+      <section id="sankey-panel">
+        <div class="sankey-toolbar">
+          <label for="threshold-input">Grouping threshold ($)</label>
+          <input id="threshold-input" type="number" min="0" step="100" value="1000" />
+          <label for="label-font-size-input">Label font-size (pt)</label>
+          <input id="label-font-size-input" type="number" min="6" step="1" value="14" />
+          <button id="apply-threshold">Apply</button>
+          <button id="toggle-hidden-groups" aria-expanded="false" aria-controls="hidden-groups-panel">Hidden groups</button>
+        </div>
+        <div id="hidden-groups-panel" class="hidden-groups-panel" hidden>
+          <div id="hidden-groups-list" class="hidden-groups-list"></div>
+        </div>
+        <section id="sankey-container">
+          <p class="sankey-empty">Load a CSV file to render the Sankey diagram.</p>
+        </section>
+      </section>
+      <section id="preview-panel" class="preview-panel collapsed">
+        <div class="preview-toolbar">
+          <span class="preview-title">Loaded CSV details</span>
+          <button id="toggle-preview" aria-expanded="false" aria-controls="preview">Show loaded CSV details</button>
+        </div>
+        <div id="preview" class="preview-content" hidden>
+          <p>No data loaded. Use "Open CSV" to select a transactions file.</p>
+        </div>
+      </section>
+    </main>
+    <script src="../../node_modules/d3/dist/d3.min.js"></script>
+    <script src="../../node_modules/d3-sankey/dist/d3-sankey.min.js"></script>
+    <script src="./renderer.js"></script>
+  </body>
+</html>
