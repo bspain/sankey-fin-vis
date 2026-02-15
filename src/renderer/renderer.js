@@ -2,6 +2,9 @@ const DEFAULT_THRESHOLD = 1000;
 const DEFAULT_LABEL_FONT_SIZE = 14;
 const HIDDEN_OTHER_KEY = '__grouped_other__';
 const parseCSV = window.csvParser && window.csvParser.parseCSV;
+if (typeof parseCSV !== 'function') {
+  throw new Error('CSV parser failed to load.');
+}
 let currentParsedCsv = null;
 const hiddenGroups = new Map();
 
