@@ -43,6 +43,48 @@ function createMenu() {
             }
           }
         },
+        {
+          label: 'Save',
+          accelerator: 'CmdOrCtrl+S',
+          click: async () => {
+            try {
+              // Request save data from renderer and wait for response
+              const csvData = await new Promise((resolve) => {
+                const timeout = setTimeout(() => resolve(null), 5000);
+                
+                const handler = (event, data) => {
+                  clearTimeout(timeout);
+                  ipcMain.removeListener('save-data-response', handler);
+                  resolve(data);
+                };
+                
+                ipcMain.on('save-data-response', handler);
+                mainWindow.webContents.send('get-save-data');
+              });
+              
+              if (!csvData) {
+                dialog.showErrorDialog(mainWindow, 'Error', 'No data loaded to save.');
+                return;
+              }
+              
+              const { canceled, filePath } = await dialog.showSaveDialog(mainWindow, {
+                defaultPath: 'transactions.csv',
+                filters: [{ name: 'CSV Files', extensions: ['csv'] }]
+              });
+              
+              if (!canceled && filePath) {
+                fs.writeFileSync(filePath, csvData, 'utf8');
+                dialog.showMessageBox(mainWindow, {
+                  type: 'info',
+                  message: 'Success',
+                  detail: 'File saved successfully.'
+                });
+              }
+            } catch (error) {
+              dialog.showErrorDialog(mainWindow, 'Error', 'Failed to save file: ' + error.message);
+            }
+          }
+        },
         { type: 'separator' },
         {
           label: 'Exit',

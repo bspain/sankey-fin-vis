@@ -30,6 +30,14 @@ window.electronAPI.onOpenFileSelected(async (filePath) => {
   }
 });
 
+// Handle save request from File menu
+window.electronAPI.onGetSaveData(async () => {
+  if (!currentParsedCsv) {
+    return null;
+  }
+  return convertParsedCSVToString(currentParsedCsv);
+});
+
 togglePreviewButton.addEventListener('click', () => {
   setPreviewVisible(previewContent.hidden);
 });
@@ -465,6 +473,30 @@ function parseCSVRecords(csvText) {
   }
 
   return records;
+}
+
+function convertParsedCSVToString(parsedCsv) {
+  const { headers, rows } = parsedCsv;
+  
+  // Escape CSV values that contain special characters
+  const escapeCSVValue = (value) => {
+    if (value === null || value === undefined) return '';
+    const stringValue = String(value);
+    if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+      return '"' + stringValue.replace(/"/g, '""') + '"';
+    }
+    return stringValue;
+  };
+  
+  // Create header line
+  const headerLine = headers.map(escapeCSVValue).join(',');
+  
+  // Create data lines
+  const dataLines = rows.map(row => {
+    return headers.map(header => escapeCSVValue(row[header] || '')).join(',');
+  });
+  
+  return [headerLine, ...dataLines].join('\n');
 }
 
 function escapeHtml(s) {
