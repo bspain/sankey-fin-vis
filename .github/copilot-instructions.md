@@ -38,6 +38,10 @@ sankey-fin-vis/
 │   ├── cli-args.test.js
 │   ├── parseCSV.test.js
 │   └── xlsx-converter.test.js
+├── e2e/                   # Playwright acceptance tests
+│   ├── acceptance.spec.js  # User story acceptance tests
+│   ├── helpers.js         # Test helper functions
+│   └── fixtures/          # Test data files
 ├── data/                  # Sample data files
 ├── package.json
 └── README.md
@@ -55,7 +59,8 @@ sankey-fin-vis/
 #### `src/main/cli-args.js`
 - Parses command-line arguments
 - Provides CLI help text
-- Must support: `--help`, `--file <path>`, etc.
+- Supports Electron flags (e.g., `--no-sandbox`) for testing
+- Must support: `--help`, `--xlsx <path>`, `--out <path>`
 - **Coverage**: Tested in `test/cli-args.test.js`
 
 #### `src/main/xlsx-converter.js`
@@ -100,14 +105,15 @@ sankey-fin-vis/
    - Use the existing test pattern (see below)
 
 4. **Test Location Rules**:
-   - Tests for `src/renderer/csv-parser.js` → `test/parseCSV.test.js`
-   - Tests for `src/main/cli-args.js` → `test/cli-args.test.js`
-   - Tests for `src/main/xlsx-converter.js` → `test/xlsx-converter.test.js`
+   - Unit tests for `src/renderer/csv-parser.js` → `test/parseCSV.test.js`
+   - Unit tests for `src/main/cli-args.js` → `test/cli-args.test.js`
+   - Unit tests for `src/main/xlsx-converter.js` → `test/xlsx-converter.test.js`
+   - Acceptance tests for user stories → `e2e/acceptance.spec.js`
    - New modules should follow the pattern: `src/path/module.js` → `test/module.test.js`
 
-### Test Pattern (Node Built-in Test Runner)
+### Unit Test Pattern (Node Built-in Test Runner)
 
-All tests use Node's native `test` module (no Jest, Mocha, etc.):
+All unit tests use Node's native `test` module (no Jest, Mocha, etc.):
 
 ```javascript
 const test = require('node:test');
@@ -126,13 +132,130 @@ test('test error cases', () => {
 });
 ```
 
+### Acceptance Test Pattern (Playwright)
+
+Acceptance tests validate user stories using Playwright for Electron testing:
+
+```javascript
+const { test, expect } = require('@playwright/test');
+const { launchElectronApp, closeElectronApp, loadFileViaMenu } = require('./helpers');
+
+test.describe('Feature Name', () => {
+  let electronApp;
+  let window;
+
+  test.beforeEach(async () => {
+    const app = await launchElectronApp();
+    electronApp = app.electronApp;
+    window = app.window;
+  });
+
+  test.afterEach(async () => {
+    await closeElectronApp(electronApp);
+  });
+
+  test('User story description', async () => {
+    // Test implementation
+    const element = await window.locator('.selector').textContent();
+    expect(element).toContain('expected text');
+  });
+});
+```
+
+#### Running Acceptance Tests Locally
+
+```bash
+# Run acceptance tests (requires Xvfb on Linux)
+npm run test:e2e
+
+# On Linux
+xvfb-run --auto-servernum npm run test:e2e
+
+# Run with headed mode (visible browser)
+npm run test:e2e:headed
+
+# Run all tests (unit + acceptance)
+npm run test:all
+```
+
 ### What to Test
 
 - **CSV Parser**: Edge cases (BOM, quotes, newlines, blank headers, malformed data)
 - **XLSX Converter**: File reading, sheet handling, format conversion
-- **CLI Args**: Flag parsing, help text, error handling
+- **CLI Args**: Flag parsing, help text, error handling, Electron flag handling
 - **Pure Functions**: Transformations, parsing, validation
-- **NOT tested directly**: Electron IPC (tested by integration), UI rendering (manual)
+- **User Stories**: End-to-end workflows via acceptance tests
+- **NOT tested via unit tests**: Electron IPC (tested by acceptance tests), UI rendering details
+
+---
+
+## Acceptance Testing with Playwright
+
+### Overview
+
+Acceptance tests validate complete user stories using Playwright to automate the Electron application. These tests ensure that the application works correctly from a user's perspective.
+
+### Test Infrastructure
+
+- **Test Directory**: `e2e/`
+- **Test Files**: `e2e/acceptance.spec.js`
+- **Helpers**: `e2e/helpers.js` - Contains utility functions for launching Electron, loading files, etc.
+- **Test Data**: `e2e/fixtures/` - Sample CSV files for testing
+
+### Key Test Helpers
+
+#### `launchElectronApp()`
+Launches the Electron app with proper sandbox flags for CI/headless environments.
+
+#### `closeElectronApp(electronApp)`
+Safely closes the Electron app after tests complete.
+
+#### `loadFileViaMenu(electronApp, window, filePath)`
+Simulates file loading through the app's IPC mechanism.
+
+### Current Acceptance Tests
+
+**Story 1**: Verifies that the app displays instructions when first opened.
+
+**Story 2**: Validates that loading a CSV file with transactions displays a Sankey diagram with correct categories.
+
+### Adding New Acceptance Tests
+
+1. Add test data to `e2e/fixtures/` if needed
+2. Add test case to `e2e/acceptance.spec.js`
+3. Use helpers from `e2e/helpers.js` for common operations
+4. Run tests locally before committing:
+   ```bash
+   xvfb-run --auto-servernum npm run test:e2e
+   ```
+
+### GitHub Actions Workflows
+
+**Acceptance Tests on PR Ready for Review** (`.github/workflows/acceptance-tests-pr.yml`):
+- Automatically triggered when a PR is marked as "ready for review"
+- Runs both unit and acceptance tests
+- Installs Xvfb and Electron dependencies
+- Uploads test artifacts on failure
+
+**Acceptance Tests - Manual Run** (`.github/workflows/acceptance-tests-manual.yml`):
+- Manually triggered from GitHub Actions tab
+- Requires PR number as input
+- Checks out the PR branch
+- Runs all tests against the latest PR changes
+- Posts results as a comment on the PR
+
+### Troubleshooting
+
+**"Missing X server or $DISPLAY" error**:
+- Use `xvfb-run --auto-servernum` when running tests on Linux without a display
+
+**Test timeout issues**:
+- Increase timeout in `playwright.config.js` if needed
+- Check that Xvfb is properly installed
+
+**Electron launch failures**:
+- Ensure all Electron dependencies are installed (see GitHub Actions workflows for list)
+- Verify that `--no-sandbox` and `--disable-setuid-sandbox` flags are being used
 
 ---
 
@@ -150,12 +273,14 @@ test('test error cases', () => {
 
 ### 3. Writing/Updating Tests
 - For each change, update or create tests
-- Run tests frequently: `npm test`
+- Run unit tests frequently: `npm test`
+- Run acceptance tests when making UI/workflow changes: `npm run test:e2e`
 - Ensure **all tests pass** before finishing
 
 ### 4. Before Submitting Changes
 ```bash
-npm test  # All tests must pass
+npm test  # All unit tests must pass
+npm run test:e2e  # Run acceptance tests (use xvfb-run on Linux)
 npm start # Verify app still runs (optional but recommended)
 ```
 
