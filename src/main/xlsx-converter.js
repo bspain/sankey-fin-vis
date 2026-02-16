@@ -33,6 +33,56 @@ function normalizeDataRow(row, firstIndex, lastIndex) {
   return normalized;
 }
 
+function isSummaryRow(row, headers, dateColumnIndex = -1) {
+  const firstNonEmptyIndex = row.findIndex((cell) => String(cell).trim() !== '');
+  if (firstNonEmptyIndex === -1) {
+    return false;
+  }
+
+  // Check if date column contains a dash (date range indicates summary row)
+  if (dateColumnIndex !== -1 && dateColumnIndex < row.length) {
+    const dateCell = String(row[dateColumnIndex]).trim();
+    if (dateCell.includes('-') && /\d+.*-.*\d+/.test(dateCell)) {
+      return true;
+    }
+  }
+
+  const firstCell = String(row[firstNonEmptyIndex]).trim();
+  const quickenSummaryPatterns = [
+    /^TOTAL\s+INFLOWS/i,
+    /^TOTAL\s+OUTFLOWS/i,
+    /^NET\s+TOTAL/i
+  ];
+
+  return quickenSummaryPatterns.some((pattern) => pattern.test(firstCell));
+}
+
+function fillBlankDates(rows, dateColumnIndex) {
+  if (dateColumnIndex === -1 || rows.length === 0) {
+    return rows;
+  }
+
+  const result = [];
+  let lastDate = null;
+
+  for (let i = 0; i < rows.length; i += 1) {
+    const row = rows[i].slice();
+    const dateCell = String(row[dateColumnIndex]).trim();
+
+    if (dateCell === '') {
+      if (lastDate !== null) {
+        row[dateColumnIndex] = lastDate;
+      }
+    } else {
+      lastDate = dateCell;
+    }
+
+    result.push(row);
+  }
+
+  return result;
+}
+
 function convertRowsToCsv(headers, rows) {
   const headerLine = headers.map(escapeCsvValue).join(',');
   const dataLines = rows.map((row) => row.map(escapeCsvValue).join(','));
@@ -51,17 +101,24 @@ function readXlsxAsCsv(filePath, options = {}) {
   }
 
   const { headers, firstIndex, lastIndex } = normalizeHeaderRow(headerRow);
-  const rawRows = data.slice(headerRowIndex + 1);
+  const dateColumnIndex = headers.findIndex((header) => header.toLowerCase() === 'date');
+
+  let rawRows = data.slice(headerRowIndex + 1);
   const normalizedRows = rawRows
     .map((row) => normalizeDataRow(row, firstIndex, lastIndex))
-    .filter((row) => row.some((cell) => String(cell).trim() !== ''));
+    .filter((row) => row.some((cell) => String(cell).trim() !== ''))
+    .filter((row) => !isSummaryRow(row, headers, dateColumnIndex));
 
-  return convertRowsToCsv(headers, normalizedRows);
+  const filledRows = fillBlankDates(normalizedRows, dateColumnIndex);
+
+  return convertRowsToCsv(headers, filledRows);
 }
 
 module.exports = {
   convertRowsToCsv,
   escapeCsvValue,
+  fillBlankDates,
+  isSummaryRow,
   normalizeHeaderRow,
   normalizeDataRow,
   readXlsxAsCsv
