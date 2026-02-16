@@ -12,6 +12,10 @@ Scaffolded Electron app for visualizing financial transactions as a Sankey diagr
 
    npm start
 
+3. Run unit tests:
+
+   npm test
+
 ## Project structure
 
 - src/main: Electron main process and preload script

@@ -1,6 +1,10 @@
 const DEFAULT_THRESHOLD = 1000;
 const DEFAULT_LABEL_FONT_SIZE = 14;
 const HIDDEN_OTHER_KEY = '__grouped_other__';
+const parseCSV = window.csvParser && window.csvParser.parseCSV;
+if (typeof parseCSV !== 'function') {
+  throw new Error('CSV parser failed to load.');
+}
 let currentParsedCsv = null;
 const hiddenGroups = new Map();
 
@@ -395,84 +399,6 @@ function updateHiddenGroupsUI(transactions, groupedTopCategories) {
     item.appendChild(button);
     hiddenGroupsList.appendChild(item);
   });
-}
-
-function parseCSV(csvText) {
-  const records = parseCSVRecords(csvText.replace(/^\uFEFF/, '')).filter((row) => row.some((cell) => cell.trim() !== ''));
-  if (records.length === 0) {
-    throw new Error('CSV is empty.');
-  }
-
-  const rawHeaders = records[0];
-  const headers = rawHeaders.map((header, index) => {
-    const trimmed = header.trim();
-    return trimmed || ('column_' + (index + 1));
-  });
-
-  const rows = records.slice(1).map((record, index) => {
-    if (record.length > headers.length) {
-      throw new Error('Row ' + (index + 2) + ' has more values than headers.');
-    }
-    const row = {};
-    headers.forEach((header, colIndex) => {
-      row[header] = (record[colIndex] || '').trim();
-    });
-    return row;
-  });
-
-  return { headers, rows };
-}
-
-function parseCSVRecords(csvText) {
-  const records = [];
-  let row = [];
-  let cell = '';
-  let inQuotes = false;
-
-  for (let i = 0; i < csvText.length; i += 1) {
-    const char = csvText[i];
-
-    if (inQuotes) {
-      if (char === '"') {
-        if (csvText[i + 1] === '"') {
-          cell += '"';
-          i += 1;
-        } else {
-          inQuotes = false;
-        }
-      } else {
-        cell += char;
-      }
-      continue;
-    }
-
-    if (char === '"') {
-      inQuotes = true;
-    } else if (char === ',') {
-      row.push(cell);
-      cell = '';
-    } else if (char === '\n' || char === '\r') {
-      if (char === '\r' && csvText[i + 1] === '\n') {
-        i += 1;
-      }
-      row.push(cell);
-      records.push(row);
-      row = [];
-      cell = '';
-    } else {
-      cell += char;
-    }
-  }
-
-  if (inQuotes) {
-    throw new Error('CSV contains an unmatched quote.');
-  }
-  if (cell.length > 0 || row.length > 0) {
-    row.push(cell);
-    records.push(row);
-  }
-
-  return records;
 }
 
 function convertParsedCSVToString(parsedCsv) {
