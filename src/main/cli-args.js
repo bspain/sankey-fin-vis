@@ -16,16 +16,28 @@ function parseCliArgs(argv) {
   let outputPath = null;
   let showHelp = false;
   const errors = [];
+  const knownElectronFlags = [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-software-rasterizer',
+    '--disable-gpu'
+  ];
+  
+  // Track if we see any CLI-specific flags
+  let hasCliFlags = false;
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
 
     if (arg === '-h' || arg === '--help') {
       showHelp = true;
+      hasCliFlags = true;
       continue;
     }
 
     if (arg === '--xlsx') {
+      hasCliFlags = true;
       const value = args[i + 1];
       if (!value || value.startsWith('-')) {
         errors.push('Missing value for --xlsx.');
@@ -37,6 +49,7 @@ function parseCliArgs(argv) {
     }
 
     if (arg === '--out') {
+      hasCliFlags = true;
       const value = args[i + 1];
       if (!value || value.startsWith('-')) {
         errors.push('Missing value for --out.');
@@ -44,6 +57,11 @@ function parseCliArgs(argv) {
         outputPath = value;
         i += 1;
       }
+      continue;
+    }
+
+    // Ignore known Electron flags silently
+    if (knownElectronFlags.includes(arg)) {
       continue;
     }
 
@@ -59,8 +77,8 @@ function parseCliArgs(argv) {
     };
   }
 
-  const hasArgs = args.length > 0;
-  if (!hasArgs) {
+  // Only enter CLI mode if we actually have CLI-specific flags
+  if (!hasCliFlags) {
     return {
       mode: 'none',
       inputPath: null,
