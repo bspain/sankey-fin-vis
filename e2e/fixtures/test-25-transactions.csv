@@ -1,0 +1,26 @@
+Date,Account,Description,Category,Amount
+1/10/2025,Bank Account,Grocery Store,Groceries,-85.23
+1/12/2025,Bank Account,Gas Station,Auto:Gas,-45.00
+1/15/2025,Bank Account,Electric Bill,Utilities:Electric,-120.50
+1/18/2025,Bank Account,Restaurant,Dining,-32.75
+1/20/2025,Bank Account,Movie Theater,Entertainment,-28.00
+1/22/2025,Bank Account,Pharmacy,Healthcare:Pharmacy,-15.50
+1/25/2025,Bank Account,Online Shopping,Shopping,-67.89
+1/28/2025,Bank Account,Internet Bill,Utilities:Internet,-79.99
+2/1/2025,Bank Account,Coffee Shop,Dining,-12.50
+2/3/2025,Bank Account,Grocery Store,Groceries,-92.15
+2/5/2025,Bank Account,Car Wash,Auto:Maintenance,-25.00
+2/8/2025,Bank Account,Doctor Visit,Healthcare:Medical,-150.00
+2/10/2025,Bank Account,Gym Membership,Fitness,-49.99
+2/12/2025,Bank Account,Water Bill,Utilities:Water,-35.00
+2/15/2025,Bank Account,Streaming Service,Entertainment,-14.99
+2/18/2025,Bank Account,Haircut,Personal Care,-35.00
+2/20/2025,Bank Account,Pet Store,Pet Care,-48.25
+2/22/2025,Bank Account,Gas Station,Auto:Gas,-52.00
+2/25/2025,Bank Account,Restaurant,Dining,-45.75
+2/27/2025,Bank Account,Bookstore,Shopping,-29.99
+3/1/2025,Bank Account,Phone Bill,Utilities:Phone,-85.00
+3/3/2025,Bank Account,Concert Tickets,Entertainment,-125.00
+3/5/2025,Bank Account,Grocery Store,Groceries,-78.50
+3/8/2025,Bank Account,Insurance Premium,Insurance,-250.00
+3/10/2025,Bank Account,Charity Donation,Charity,-100.00

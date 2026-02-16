@@ -5,6 +5,7 @@ const { getCliHelpText, parseCliArgs } = require('./cli-args');
 const { readXlsxAsCsv } = require('./xlsx-converter');
 
 let mainWindow;
+let rawDataWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -19,6 +20,30 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   // mainWindow.webContents.openDevTools();
+}
+
+function createRawDataWindow() {
+  if (rawDataWindow && !rawDataWindow.isDestroyed()) {
+    rawDataWindow.focus();
+    return;
+  }
+
+  rawDataWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    parent: mainWindow,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  rawDataWindow.loadFile(path.join(__dirname, '..', 'renderer', 'raw-data.html'));
+  
+  rawDataWindow.on('closed', () => {
+    rawDataWindow = null;
+  });
 }
 
 function createMenu() {
@@ -100,6 +125,17 @@ function createMenu() {
       label: 'View',
       submenu: [
         {
+          label: 'Raw Data',
+          accelerator: 'CmdOrCtrl+R',
+          click: () => {
+            if (!mainWindow) return;
+            createRawDataWindow();
+            // Request raw data from main window
+            mainWindow.webContents.send('request-raw-data');
+          }
+        },
+        { type: 'separator' },
+        {
           label: 'Toggle Developer Tools',
           accelerator: 'CmdOrCtrl+Shift+I',
           click: () => {
@@ -174,4 +210,10 @@ ipcMain.handle('dialog:saveFile', async (event, defaultName, data) => {
   if (canceled || !filePath) return { canceled: true };
   fs.writeFileSync(filePath, data, 'utf8');
   return { canceled: false, filePath };
+});
+
+ipcMain.on('send-raw-data', (event, data) => {
+  if (rawDataWindow && !rawDataWindow.isDestroyed()) {
+    rawDataWindow.webContents.send('raw-data-loaded', data);
+  }
 });
