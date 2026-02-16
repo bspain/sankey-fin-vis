@@ -1,3 +1,9 @@
+/**
+ * Parse CSV text into normalized headers and row objects.
+ * Trims values, handles UTF-8 BOM, and validates row width.
+ * @param {string} csvText
+ * @returns {{headers: string[], rows: Record<string, string>[]}}
+ */
 function parseCSV(csvText) {
   const records = parseCSVRecords(csvText.replace(/^\uFEFF/, '')).filter((row) => row.some((cell) => cell.trim() !== ''));
   if (records.length === 0) {
@@ -24,6 +30,12 @@ function parseCSV(csvText) {
   return { headers, rows };
 }
 
+/**
+ * Parse CSV text into raw row/cell arrays with quote handling.
+ * Supports escaped quotes, commas, and line breaks inside quoted fields.
+ * @param {string} csvText
+ * @returns {string[][]}
+ */
 function parseCSVRecords(csvText) {
   const records = [];
   let row = [];
