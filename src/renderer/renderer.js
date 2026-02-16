@@ -1,8 +1,8 @@
 const DEFAULT_THRESHOLD = 1000;
 const DEFAULT_LABEL_FONT_SIZE = 14;
 const HIDDEN_OTHER_KEY = '__grouped_other__';
-const parseCSV = window.csvParser && window.csvParser.parseCSV;
-if (typeof parseCSV !== 'function') {
+const csvParse = window.csvParser && window.csvParser.parseCSV;
+if (typeof csvParse !== 'function') {
   throw new Error('CSV parser failed to load.');
 }
 let currentParsedCsv = null;
@@ -20,16 +20,30 @@ const hiddenGroupsList = document.getElementById('hidden-groups-list');
 
 // Listen for file selection from File menu
 window.electronAPI.onOpenFileSelected(async (filePath) => {
+  console.debug('CSV load: file selected', { filePath });
   try {
+    console.debug('CSV load: reading file');
     const result = await window.electronAPI.readAndParseFile(filePath);
+    console.debug('CSV load: read result', {
+      filePath: result && result.filePath,
+      hasContent: Boolean(result && result.content),
+      error: result && result.error
+    });
     if (result.error) {
       showPreviewError('Failed to parse file: ' + result.error);
       return;
     }
-    const parsedCsv = parseCSV(result.content);
+    console.debug('CSV load: parsing content');
+    const parsedCsv = csvParse(result.content);
+    console.debug('CSV load: parsed CSV', {
+      headerCount: parsedCsv.headers.length,
+      rowCount: parsedCsv.rows.length
+    });
     currentParsedCsv = parsedCsv;
+    console.debug('CSV load: handle CSV');
     handleCSV(parsedCsv, result.filePath);
   } catch (error) {
+    console.debug('CSV load: error', error);
     showPreviewError(error.message || 'Failed to parse file.');
   }
 });
@@ -69,6 +83,11 @@ labelFontSizeInput.addEventListener('keydown', (event) => {
 });
 
 function handleCSV(parsedCsv, filePath) {
+  console.debug('CSV load: handleCSV', {
+    filePath,
+    headerCount: parsedCsv.headers.length,
+    rowCount: parsedCsv.rows.length
+  });
   const headers = parsedCsv.headers;
   const rows = parsedCsv.rows;
   hiddenGroups.clear();

@@ -95,6 +95,19 @@ function createMenu() {
           }
         }
       ]
+    },
+    {
+      label: 'View',
+      submenu: [
+        {
+          label: 'Toggle Developer Tools',
+          accelerator: 'CmdOrCtrl+Shift+I',
+          click: () => {
+            if (!mainWindow) return;
+            mainWindow.webContents.toggleDevTools();
+          }
+        }
+      ]
     }
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
