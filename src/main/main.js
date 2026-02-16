@@ -4,6 +4,8 @@ const fs = require('fs');
 const { getCliHelpText, parseCliArgs } = require('./cli-args');
 const { readXlsxAsCsv } = require('./xlsx-converter');
 
+const RAW_DATA_REQUEST_TIMEOUT_MS = 5000;
+
 let mainWindow;
 let rawDataWindow;
 
@@ -134,7 +136,7 @@ function createMenu() {
             
             // Request raw data from main window first
             const rawData = await new Promise((resolve) => {
-              const timeout = setTimeout(() => resolve(null), 5000);
+              const timeout = setTimeout(() => resolve(null), RAW_DATA_REQUEST_TIMEOUT_MS);
               
               const handler = (event, data) => {
                 clearTimeout(timeout);
