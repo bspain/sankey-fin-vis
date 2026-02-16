@@ -77,6 +77,10 @@ test.describe('Sankey Financial Visualizer - Acceptance Tests', () => {
     
     // Then I can see that all 25 rows were loaded successfully
     await rawDataWindow.waitForLoadState('domcontentloaded');
+    
+    // Wait for the data to be sent and displayed
+    await rawDataWindow.waitForSelector('#raw-data-container h2', { timeout: 5000 });
+    
     const parsedText = await rawDataWindow.locator('#raw-data-container p').first().textContent();
     expect(parsedText).toContain('25 rows');
     

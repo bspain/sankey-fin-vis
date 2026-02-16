@@ -44,6 +44,8 @@ function createRawDataWindow() {
   rawDataWindow.on('closed', () => {
     rawDataWindow = null;
   });
+  
+  return rawDataWindow;
 }
 
 function createMenu() {
@@ -127,11 +129,36 @@ function createMenu() {
         {
           label: 'Raw Data',
           accelerator: 'CmdOrCtrl+R',
-          click: () => {
+          click: async () => {
             if (!mainWindow) return;
-            createRawDataWindow();
-            // Request raw data from main window
-            mainWindow.webContents.send('request-raw-data');
+            
+            // Request raw data from main window first
+            const rawData = await new Promise((resolve) => {
+              const timeout = setTimeout(() => resolve(null), 5000);
+              
+              const handler = (event, data) => {
+                clearTimeout(timeout);
+                ipcMain.removeListener('raw-data-response', handler);
+                resolve(data);
+              };
+              
+              ipcMain.on('raw-data-response', handler);
+              mainWindow.webContents.send('request-raw-data');
+            });
+            
+            if (!rawData) {
+              return;
+            }
+            
+            // Now create the window
+            const window = createRawDataWindow();
+            
+            // Wait for the window to finish loading before sending data
+            window.webContents.once('did-finish-load', () => {
+              if (rawDataWindow && !rawDataWindow.isDestroyed()) {
+                rawDataWindow.webContents.send('raw-data-loaded', rawData);
+              }
+            });
           }
         },
         { type: 'separator' },
@@ -210,10 +237,4 @@ ipcMain.handle('dialog:saveFile', async (event, defaultName, data) => {
   if (canceled || !filePath) return { canceled: true };
   fs.writeFileSync(filePath, data, 'utf8');
   return { canceled: false, filePath };
-});
-
-ipcMain.on('send-raw-data', (event, data) => {
-  if (rawDataWindow && !rawDataWindow.isDestroyed()) {
-    rawDataWindow.webContents.send('raw-data-loaded', data);
-  }
 });

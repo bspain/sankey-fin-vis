@@ -58,9 +58,10 @@ window.electronAPI.onGetSaveData(async () => {
 // Handle raw data request from View -> Raw Data menu
 window.electronAPI.onRequestRawData(() => {
   if (!currentParsedCsv || !currentFilePath) {
+    window.electronAPI.sendRawDataResponse(null);
     return;
   }
-  window.electronAPI.sendRawData({
+  window.electronAPI.sendRawDataResponse({
     filePath: currentFilePath,
     headers: currentParsedCsv.headers,
     rows: currentParsedCsv.rows
