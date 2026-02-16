@@ -1,6 +1,6 @@
 {
   "name": "sankey-fin-vis",
-  "version": "1.0.0",
+  "version": "1.1.1",
   "description": "Electron app to visualize financial transactions as a Sankey diagram grouped by category",
   "main": "src/main/main.js",
   "scripts": {
