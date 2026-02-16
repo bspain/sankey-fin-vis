@@ -48,8 +48,8 @@ async function loadFileViaMenu(electronApp, window, filePath) {
     mainWindow.webContents.send('open-file-selected', filePath);
   }, filePath);
   
-  // Wait for the diagram to render (renderer.js processes the file)
-  await window.waitForTimeout(3000);
+  // Wait for the diagram to render by waiting for the SVG element to appear
+  await window.waitForSelector('#sankey-container svg', { timeout: 10000 });
 }
 
 module.exports = {
