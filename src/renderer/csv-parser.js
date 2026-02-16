@@ -8,6 +8,7 @@
  * @throws {Error} When a row contains more values than there are headers.
  */
 function parseCSV(csvText) {
+  console.debug('parseCSV called');
   const records = parseCSVRecords(csvText.replace(/^\uFEFF/, '')).filter((row) => row.some((cell) => cell.trim() !== ''));
   if (records.length === 0) {
     throw new Error('CSV is empty.');
@@ -30,6 +31,7 @@ function parseCSV(csvText) {
     return row;
   });
 
+  console.debug('parseCSV result', { headers, rowCount: rows.length });
   return { headers, rows };
 }
 
