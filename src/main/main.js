@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog, Menu } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const XLSX = require('xlsx');
+const { getCliHelpText, parseCliArgs } = require('./cli-args');
+const { readXlsxAsCsv } = require('./xlsx-converter');
 
 let mainWindow;
 
@@ -99,6 +100,32 @@ function createMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+const cliArgs = parseCliArgs(process.argv.slice(2));
+
+if (cliArgs.mode === 'help') {
+  console.log(getCliHelpText());
+  process.exit(0);
+}
+
+if (cliArgs.mode === 'error') {
+  console.error(cliArgs.errors.join('\n'));
+  console.error('');
+  console.error(getCliHelpText());
+  process.exit(1);
+}
+
+if (cliArgs.mode === 'convert') {
+  try {
+    const csvData = readXlsxAsCsv(cliArgs.inputPath);
+    fs.writeFileSync(cliArgs.outputPath, csvData, 'utf8');
+    console.log('Saved CSV to ' + cliArgs.outputPath);
+    process.exit(0);
+  } catch (error) {
+    console.error('Failed to convert file: ' + error.message);
+    process.exit(1);
+  }
+}
+
 app.whenReady().then(() => {
   createWindow();
   createMenu();
@@ -114,24 +141,7 @@ ipcMain.handle('file:readAndParse', async (event, filePath) => {
     let content;
 
     if (ext === '.xlsx') {
-      // Parse XLSX file, starting from row 5 (0-indexed as row 4)
-      const workbook = XLSX.readFile(filePath);
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      
-      // Get the data starting from row 5 (index 4)
-      const data = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: '' });
-      
-      // Find the header row (row 5 in Excel = index 4)
-      const headerRow = data[4];
-      if (!headerRow) {
-        return { canceled: false, filePath, content: '', error: 'No data found at row 5' };
-      }
-
-      // Get data rows starting from row 6 (index 5)
-      const dataRows = data.slice(5);
-      
-      // Convert to CSV format
-      content = convertToCSV(headerRow, dataRows);
+      content = readXlsxAsCsv(filePath);
     } else {
       // Read CSV file directly
       content = fs.readFileSync(filePath, 'utf8');
@@ -142,28 +152,6 @@ ipcMain.handle('file:readAndParse', async (event, filePath) => {
     return { canceled: false, filePath, content: '', error: error.message };
   }
 });
-
-function convertToCSV(headerRow, dataRows) {
-  // Create header line
-  const header = headerRow.map(escapeCSVValue).join(',');
-  
-  // Create data lines
-  const rows = dataRows.map(row => {
-    if (!row || row.length === 0) return '';
-    return row.map(cell => escapeCSVValue(cell || '')).join(',');
-  }).filter(line => line.length > 0);
-  
-  return [header, ...rows].join('\n');
-}
-
-function escapeCSVValue(value) {
-  if (value === null || value === undefined) return '';
-  const stringValue = String(value);
-  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-    return '"' + stringValue.replace(/"/g, '""') + '"';
-  }
-  return stringValue;
-}
 
 ipcMain.handle('dialog:saveFile', async (event, defaultName, data) => {
   const { canceled, filePath } = await dialog.showSaveDialog({
