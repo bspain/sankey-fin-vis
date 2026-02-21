@@ -4,7 +4,10 @@ const fs = require('fs');
 const { getCliHelpText, parseCliArgs } = require('./cli-args');
 const { readXlsxAsCsv } = require('./xlsx-converter');
 
+const RAW_DATA_REQUEST_TIMEOUT_MS = 5000;
+
 let mainWindow;
+let rawDataWindow;
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -19,6 +22,32 @@ function createWindow() {
 
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
   // mainWindow.webContents.openDevTools();
+}
+
+function createRawDataWindow() {
+  if (rawDataWindow && !rawDataWindow.isDestroyed()) {
+    rawDataWindow.focus();
+    return;
+  }
+
+  rawDataWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    parent: mainWindow,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+
+  rawDataWindow.loadFile(path.join(__dirname, '..', 'renderer', 'raw-data.html'));
+  
+  rawDataWindow.on('closed', () => {
+    rawDataWindow = null;
+  });
+  
+  return rawDataWindow;
 }
 
 function createMenu() {
@@ -99,6 +128,42 @@ function createMenu() {
     {
       label: 'View',
       submenu: [
+        {
+          label: 'Raw Data',
+          accelerator: 'CmdOrCtrl+R',
+          click: async () => {
+            if (!mainWindow) return;
+            
+            // Request raw data from main window first
+            const rawData = await new Promise((resolve) => {
+              const timeout = setTimeout(() => resolve(null), RAW_DATA_REQUEST_TIMEOUT_MS);
+              
+              const handler = (event, data) => {
+                clearTimeout(timeout);
+                ipcMain.removeListener('raw-data-response', handler);
+                resolve(data);
+              };
+              
+              ipcMain.on('raw-data-response', handler);
+              mainWindow.webContents.send('request-raw-data');
+            });
+            
+            if (!rawData) {
+              return;
+            }
+            
+            // Now create the window
+            const window = createRawDataWindow();
+            
+            // Wait for the window to finish loading before sending data
+            window.webContents.once('did-finish-load', () => {
+              if (rawDataWindow && !rawDataWindow.isDestroyed()) {
+                rawDataWindow.webContents.send('raw-data-loaded', rawData);
+              }
+            });
+          }
+        },
+        { type: 'separator' },
         {
           label: 'Toggle Developer Tools',
           accelerator: 'CmdOrCtrl+Shift+I',

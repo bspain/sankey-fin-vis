@@ -12,5 +12,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
       const data = await callback();
       ipcRenderer.send('save-data-response', data);
     });
+  },
+  onRawDataLoaded: (callback) => {
+    ipcRenderer.on('raw-data-loaded', (event, data) => callback(data));
+  },
+  sendRawDataResponse: (data) => ipcRenderer.send('raw-data-response', data),
+  onRequestRawData: (callback) => {
+    ipcRenderer.on('request-raw-data', () => callback());
   }
 });

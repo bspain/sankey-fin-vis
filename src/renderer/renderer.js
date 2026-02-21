@@ -6,14 +6,12 @@ if (typeof csvParse !== 'function') {
   throw new Error('CSV parser failed to load.');
 }
 let currentParsedCsv = null;
+let currentFilePath = null;
 const hiddenGroups = new Map();
 
 const applyThresholdButton = document.getElementById('apply-threshold');
 const thresholdInput = document.getElementById('threshold-input');
 const labelFontSizeInput = document.getElementById('label-font-size-input');
-const togglePreviewButton = document.getElementById('toggle-preview');
-const previewContent = document.getElementById('preview');
-const previewPanel = document.getElementById('preview-panel');
 const toggleHiddenGroupsButton = document.getElementById('toggle-hidden-groups');
 const hiddenGroupsPanel = document.getElementById('hidden-groups-panel');
 const hiddenGroupsList = document.getElementById('hidden-groups-list');
@@ -30,7 +28,7 @@ window.electronAPI.onOpenFileSelected(async (filePath) => {
       error: result && result.error
     });
     if (result.error) {
-      showPreviewError('Failed to parse file: ' + result.error);
+      console.error('Failed to parse file:', result.error);
       return;
     }
     console.debug('CSV load: parsing content');
@@ -40,11 +38,12 @@ window.electronAPI.onOpenFileSelected(async (filePath) => {
       rowCount: parsedCsv.rows.length
     });
     currentParsedCsv = parsedCsv;
+    currentFilePath = result.filePath;
     console.debug('CSV load: handle CSV');
     handleCSV(parsedCsv, result.filePath);
   } catch (error) {
     console.debug('CSV load: error', error);
-    showPreviewError(error.message || 'Failed to parse file.');
+    console.error('Failed to parse file:', error.message);
   }
 });
 
@@ -56,8 +55,17 @@ window.electronAPI.onGetSaveData(async () => {
   return convertParsedCSVToString(currentParsedCsv);
 });
 
-togglePreviewButton.addEventListener('click', () => {
-  setPreviewVisible(previewContent.hidden);
+// Handle raw data request from View -> Raw Data menu
+window.electronAPI.onRequestRawData(() => {
+  if (!currentParsedCsv || !currentFilePath) {
+    window.electronAPI.sendRawDataResponse(null);
+    return;
+  }
+  window.electronAPI.sendRawDataResponse({
+    filePath: currentFilePath,
+    headers: currentParsedCsv.headers,
+    rows: currentParsedCsv.rows
+  });
 });
 
 toggleHiddenGroupsButton.addEventListener('click', () => {
@@ -88,35 +96,8 @@ function handleCSV(parsedCsv, filePath) {
     headerCount: parsedCsv.headers.length,
     rowCount: parsedCsv.rows.length
   });
-  const headers = parsedCsv.headers;
-  const rows = parsedCsv.rows;
   hiddenGroups.clear();
-  previewContent.innerHTML = '<h2>Loaded: ' + escapeHtml(filePath) + '</h2>';
-  previewContent.innerHTML += '<p>Parsed ' + rows.length + ' rows across ' + headers.length + ' columns.</p>';
-  previewContent.innerHTML += '<div class="sample-lines"><div class="line"><strong>Headers:</strong> ' + headers.map(escapeHtml).join(', ') + '</div></div>';
-
-  if (rows.length > 0) {
-    const sampleRows = rows.slice(0, 10).map((row, index) => {
-      const rowValues = headers.map((header) => escapeHtml(row[header] || '')).join(' | ');
-      return '<div class="line">' + (index + 1) + '. ' + rowValues + '</div>';
-    }).join('');
-    previewContent.innerHTML += '<div class="sample-lines">' + sampleRows + '</div>';
-  }
-
   renderCurrentSankey();
-}
-
-function showPreviewError(message) {
-  previewContent.innerHTML = '<h2>CSV Error</h2><p>' + escapeHtml(message) + '</p>';
-  setPreviewVisible(true);
-}
-
-function setPreviewVisible(isVisible) {
-  previewContent.hidden = !isVisible;
-  togglePreviewButton.setAttribute('aria-expanded', String(isVisible));
-  togglePreviewButton.textContent = isVisible ? 'Hide loaded CSV details' : 'Show loaded CSV details';
-  previewPanel.classList.toggle('collapsed', !isVisible);
-  previewPanel.classList.toggle('expanded', isVisible);
 }
 
 function setHiddenGroupsVisible(isVisible) {

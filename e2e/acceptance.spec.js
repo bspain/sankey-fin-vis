@@ -52,4 +52,51 @@ test.describe('Sankey Financial Visualizer - Acceptance Tests', () => {
     const utilitiesCategory = window.locator('#sankey-container svg text').filter({ hasText: /Utilities/ });
     await expect(utilitiesCategory).toBeVisible();
   });
+
+  test('Story 3: Should display all 25 rows in raw data window when viewing parsed data', async () => {
+    // Given I have a data set file with 25 rows of transactions
+    const testFilePath = path.join(__dirname, 'fixtures', 'test-25-transactions.csv');
+    
+    // When I open the file in the app
+    await loadFileViaMenu(electronApp, window, testFilePath);
+    
+    // And I select the option to view the parsed data
+    // Trigger the View > Raw Data menu by evaluating in main process
+    await electronApp.evaluate(({ Menu }) => {
+      const menu = Menu.getApplicationMenu();
+      const viewMenu = menu.items.find(item => item.label === 'View');
+      const rawDataItem = viewMenu.submenu.items.find(item => item.label === 'Raw Data');
+      rawDataItem.click();
+    });
+    
+    // Wait for the raw data window to open
+    const rawDataWindow = await electronApp.waitForEvent('window', {
+      predicate: (win) => win.url().includes('raw-data.html'),
+      timeout: 5000
+    });
+    
+    // Then I can see that all 25 rows were loaded successfully
+    await rawDataWindow.waitForLoadState('domcontentloaded');
+    
+    // Wait for the data to be sent and displayed
+    await rawDataWindow.waitForSelector('#raw-data-container h2', { timeout: 5000 });
+    
+    const parsedText = await rawDataWindow.locator('#raw-data-container p').first().textContent();
+    expect(parsedText).toContain('25 rows');
+    
+    // And I can scroll through the list of all transactions
+    // Verify all 25 transaction lines are present
+    const allLines = await rawDataWindow.locator('.sample-lines .line').count();
+    // We expect 26 lines: 1 header line + 25 data lines
+    expect(allLines).toBe(26);
+    
+    // Verify we can see the first and last transactions
+    const firstTransaction = rawDataWindow.locator('.sample-lines .line').nth(1); // Skip header
+    await expect(firstTransaction).toContainText('1. ');
+    await expect(firstTransaction).toContainText('Grocery Store');
+    
+    const lastTransaction = rawDataWindow.locator('.sample-lines .line').nth(25);
+    await expect(lastTransaction).toContainText('25. ');
+    await expect(lastTransaction).toContainText('Charity Donation');
+  });
 });
